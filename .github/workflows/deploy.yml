@@ -39,12 +39,13 @@ jobs:
           echo "$DEPLOY_UPLOAD_SSH_KEY" > /tmp/upload_key
           chmod 600 /tmp/upload_key
           ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
-          # -O forces the legacy SCP protocol so the remote forced command
-          # (restrict,command="internal-sftp") receives a predictable
-          # exec — modern OpenSSH defaults `scp` to the SFTP protocol,
-          # which doesn't go through the same forced-command path.
-          scp -O -i /tmp/upload_key build-artifact.tar.gz \
-            ubuntu@"$DEPLOY_HOST":/home/ubuntu/incoming/build-artifact.tar.gz
+          # The remote forced command is restrict,command="internal-sftp",
+          # which only speaks the SFTP protocol — plain `scp` (legacy SCP
+          # protocol on OpenSSH <9.0, which is what both this runner and
+          # the box ship) gets rejected with "This service allows sftp
+          # connections only." Use sftp directly instead.
+          echo "put build-artifact.tar.gz /home/ubuntu/incoming/build-artifact.tar.gz" \
+            | sftp -i /tmp/upload_key -b - ubuntu@"$DEPLOY_HOST"
           rm -f /tmp/upload_key
 
       - name: Trigger deploy on the box
