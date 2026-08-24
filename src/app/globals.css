@@ -294,6 +294,62 @@ body {
   border-right-color: var(--red);
 }
 
+/* Mobile-only bottom nav: spaces as folder tabs. Square-cornered like
+   everything else in this system — the "tab" read comes from the active
+   item lifting above its neighbors on a red top rule, not from rounding. */
+.space-tabs {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-top: 1px solid var(--line-object);
+  background: var(--sheet-raised);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.space-tab {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  border-top: 2px solid transparent;
+  border-right: 1px solid var(--line-constr);
+  color: var(--ink-faint);
+  transition: color var(--dur-fast) ease,
+    background-color var(--dur-fast) ease,
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.space-tab:last-child {
+  border-right: none;
+}
+
+.space-tab:hover,
+.space-tab:focus-visible {
+  color: var(--ink);
+  background: var(--sheet-hover);
+}
+
+.space-tab[data-active="true"] {
+  border-top-color: var(--red);
+  background: var(--sheet);
+  color: var(--ink);
+  transform: translateY(-2px);
+}
+
+@media (min-width: 768px) {
+  /* Desktop gets the inline grid (SpaceTile) instead — plain media query,
+     not Tailwind's md:hidden, because .space-tabs sets position:fixed
+     outside any Tailwind layer and would otherwise beat a layered
+     utility on the same element regardless of source order. */
+  .space-tabs {
+    display: none;
+  }
+}
+
 /* Row-level interactivity inside panels: entries that expand or link
    get a hover wash and a pointer, entries that are just static readouts
    don't — keeps the affordance honest instead of hovering everything.

@@ -21,7 +21,7 @@ export default async function SpacePage({
     <>
       <Frame />
       <Reveal>
-        <main className="mx-auto max-w-[90rem] px-[var(--frame)] py-10">
+        <main className="mx-auto max-w-[90rem] px-[var(--frame)] pt-10 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-10">
           <header className="sheet-grid mb-10 border-b border-object pb-5">
             <div className="reveal col-span-12 md:col-span-7">
               <Link

@@ -31,7 +31,7 @@ export default function DashboardPage() {
     <>
       <Frame />
       <Reveal>
-        <main className="mx-auto max-w-[90rem] px-[var(--frame)] py-10">
+        <main className="mx-auto max-w-[90rem] px-[var(--frame)] pt-10 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-10">
           {/* Masthead. One display-size element on the sheet, per the
               portfolio's rule — everything else is label register. */}
           <header className="sheet-grid mb-10 border-b border-object pb-5">
@@ -62,19 +62,27 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <section className="sheet-grid mb-10">
-            <div className="reveal col-span-12 mb-3 flex items-baseline gap-3 border-b border-constr pb-2">
-              <span className="t-label text-ink">Spaces</span>
-              <span className="t-label-sm tnum text-ink-faint">
-                {String(SPACES.length).padStart(2, "0")}
-              </span>
-            </div>
-            <div className="col-span-12 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
-              {SPACES.map((space, i) => (
-                <SpaceTile key={space.slug} space={space} index={i} />
-              ))}
-            </div>
-          </section>
+          {/* Desktop only — mobile gets the same set as a fixed bottom
+              tab strip (MobileSpaceTabs, in layout.tsx) instead of a
+              cramped grid. The hidden/md:block toggle has to live on a
+              plain wrapper: .sheet-grid sets display:grid outside any
+              Tailwind layer, which beats a layered "hidden" on the same
+              element regardless of order. */}
+          <div className="hidden md:block">
+            <section className="sheet-grid mb-10">
+              <div className="reveal col-span-12 mb-3 flex items-baseline gap-3 border-b border-constr pb-2">
+                <span className="t-label text-ink">Spaces</span>
+                <span className="t-label-sm tnum text-ink-faint">
+                  {String(SPACES.length).padStart(2, "0")}
+                </span>
+              </div>
+              <div className="col-span-12 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
+                {SPACES.map((space, i) => (
+                  <SpaceTile key={space.slug} space={space} index={i} />
+                ))}
+              </div>
+            </section>
+          </div>
 
           {/* Asymmetric on purpose: Tasks is the sheet's subject and gets
               the wide column; the ledger panels stack narrow beside it. */}

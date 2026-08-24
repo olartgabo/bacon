@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Space_Mono } from "next/font/google";
 import "./globals.css";
+import { MobileSpaceTabs } from "@/components/MobileSpaceTabs";
 
 // Same three faces as olartgabo.dev, loaded the same way: Cabinet for
 // display, Satoshi for prose, Space Mono for every label and dimension.
@@ -70,7 +71,10 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: BOOT }} />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <MobileSpaceTabs />
+      </body>
     </html>
   );
 }
