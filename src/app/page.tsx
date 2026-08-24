@@ -1,10 +1,14 @@
 import { getActions, getNumberedDocs, getRecentLogs } from "@/lib/olympus";
 import { SPACES } from "@/lib/spaces";
+import { db } from "@/lib/db/client";
+import { captures as capturesTable } from "@/lib/db/schema";
+import { desc } from "drizzle-orm";
 import { Panel } from "@/components/Panel";
 import { Frame } from "@/components/Frame";
 import { SpaceTile } from "@/components/SpaceTile";
 import { ExpandableRow } from "@/components/ExpandableRow";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { CaptureForm } from "@/components/CaptureForm";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +17,12 @@ export default function DashboardPage() {
   const tasks = getNumberedDocs("tasks");
   const decisions = getNumberedDocs("decisions");
   const logs = getRecentLogs(8);
+  const captures = db
+    .select()
+    .from(capturesTable)
+    .orderBy(desc(capturesTable.id))
+    .limit(10)
+    .all();
 
   return (
     <>
@@ -26,7 +36,7 @@ export default function DashboardPage() {
             </span>
           </div>
           <div className="col-span-4 flex items-center justify-end gap-4">
-            <span className="t-label text-ink-faint">read-only · olympus</span>
+            <span className="t-label text-ink-faint">olympus · captures write local, sync manual</span>
             <ThemeToggle />
           </div>
         </div>
@@ -45,8 +55,39 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        <div className="sheet-grid mb-10">
+          <div className="col-span-12 md:col-span-8">
+            <CaptureForm />
+          </div>
+        </div>
+
         <div className="sheet-grid gap-y-6">
           <div className="col-span-12 flex flex-col gap-6 md:col-span-6">
+            <Panel title="Captures" count={captures.length}>
+              {captures.length === 0 ? (
+                <p className="t-label text-ink-faint">nothing captured yet</p>
+              ) : (
+                <dl>
+                  {captures.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-baseline gap-3 border-b border-constr py-1.5 last:border-b-0"
+                    >
+                      <dt
+                        className={`t-label-sm shrink-0 ${c.synced ? "text-ink-faint/70" : "text-red"}`}
+                      >
+                        {c.synced ? "synced" : "pending"}
+                      </dt>
+                      <dd className="t-label text-ink-dim">{c.title}</dd>
+                      <span className="t-label-sm ml-auto shrink-0 text-ink-faint">
+                        {c.domain}
+                      </span>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </Panel>
+
             <Panel title="Pending" count={pending.length}>
               {pending.length === 0 ? (
                 <p className="t-label text-ink-faint">nothing pending</p>
