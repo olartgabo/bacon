@@ -1,5 +1,6 @@
 import { getActions, getNumberedDocs, getRecentLogs } from "@/lib/olympus";
 import { Panel } from "@/components/Panel";
+import { Frame } from "@/components/Frame";
 
 export const dynamic = "force-dynamic";
 
@@ -10,76 +11,102 @@ export default function DashboardPage() {
   const logs = getRecentLogs(8);
 
   return (
-    <main className="sheet-grid py-10 gap-y-8">
-      <header className="col-span-12 flex items-baseline justify-between border-b border-object pb-4">
-        <h1 className="t-label text-ink text-base tracking-normal">
-          tasks.olartgabo.dev
-        </h1>
-        <span className="t-label text-ink-faint">read-only · olympus</span>
-      </header>
+    <>
+      <Frame />
+      <main className="mx-auto max-w-[90rem] px-[var(--frame)] py-10">
+        <div className="sheet-grid mb-8 items-baseline border-b border-object pb-4">
+          <div className="col-span-8 flex items-baseline gap-4">
+            <span className="t-label text-red">SHEET 01</span>
+            <span className="t-label text-ink-faint">
+              tasks.olartgabo.dev
+            </span>
+          </div>
+          <span className="t-label col-span-4 text-right text-ink-faint">
+            read-only · olympus
+          </span>
+        </div>
 
-      <div className="col-span-12 md:col-span-6 flex flex-col gap-4">
-        <Panel title={`Pending (${pending.length})`}>
-          {pending.length === 0 ? (
-            <p className="t-label text-ink-faint">nothing pending</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {pending.map((item, i) => (
-                <li key={i} className="text-sm text-ink-dim">
-                  <span className="text-red tnum mr-2">[ ]</span>
-                  {item.text}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
+        <div className="sheet-grid gap-y-6">
+          <div className="col-span-12 flex flex-col gap-6 md:col-span-6">
+            <Panel title="Pending" count={pending.length}>
+              {pending.length === 0 ? (
+                <p className="t-label text-ink-faint">nothing pending</p>
+              ) : (
+                <dl>
+                  {pending.map((item, i) => (
+                    <div
+                      key={i}
+                      className="flex items-baseline gap-3 border-b border-constr py-1.5 last:border-b-0"
+                    >
+                      <dt className="t-label text-red">—</dt>
+                      <dd className="t-label text-ink-dim">{item.text}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </Panel>
 
-        <Panel title={`Recent logs (${logs.length})`}>
-          <ul className="flex flex-col gap-3">
-            {logs.map((entry, i) => (
-              <li key={i} className="text-sm">
-                <div className="t-label text-ink-faint">
-                  {entry.device} · {entry.date}
-                </div>
-              </li>
-            ))}
-            {logs.length === 0 && (
-              <p className="t-label text-ink-faint">no logs found</p>
-            )}
-          </ul>
-        </Panel>
-      </div>
+            <Panel title="Recent logs" count={logs.length}>
+              {logs.length === 0 ? (
+                <p className="t-label text-ink-faint">no logs found</p>
+              ) : (
+                <dl>
+                  {logs.map((entry, i) => (
+                    <div
+                      key={i}
+                      className="flex items-baseline gap-3 border-b border-constr py-1.5 last:border-b-0"
+                    >
+                      <dt className="t-label text-ink">{entry.device}</dt>
+                      <dd className="t-label ml-auto text-right text-ink-faint">
+                        {entry.date}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </Panel>
+          </div>
 
-      <div className="col-span-12 md:col-span-6 flex flex-col gap-4">
-        <Panel title={`Tasks (${tasks.length})`}>
-          <ul className="flex flex-col gap-2">
-            {tasks.map((t) => (
-              <li key={t.slug} className="text-sm text-ink-dim">
-                <span className="t-label text-ink-faint mr-2">
-                  {t.status ?? "—"}
-                </span>
-                {t.title}
-              </li>
-            ))}
-            {tasks.length === 0 && (
-              <p className="t-label text-ink-faint">no tasks found</p>
-            )}
-          </ul>
-        </Panel>
+          <div className="col-span-12 flex flex-col gap-6 md:col-span-6">
+            <Panel title="Tasks" count={tasks.length}>
+              {tasks.length === 0 ? (
+                <p className="t-label text-ink-faint">no tasks found</p>
+              ) : (
+                <dl>
+                  {tasks.map((t) => (
+                    <div
+                      key={t.slug}
+                      className="flex items-baseline gap-3 border-b border-constr py-1.5 last:border-b-0"
+                    >
+                      <dt className="t-label-sm shrink-0 text-ink-faint/70">
+                        {t.status ?? "—"}
+                      </dt>
+                      <dd className="t-label text-ink-dim">{t.title}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </Panel>
 
-        <Panel title={`Decisions (${decisions.length})`}>
-          <ul className="flex flex-col gap-2">
-            {decisions.map((d) => (
-              <li key={d.slug} className="text-sm text-ink-dim">
-                {d.title}
-              </li>
-            ))}
-            {decisions.length === 0 && (
-              <p className="t-label text-ink-faint">no decisions found</p>
-            )}
-          </ul>
-        </Panel>
-      </div>
-    </main>
+            <Panel title="Decisions" count={decisions.length}>
+              {decisions.length === 0 ? (
+                <p className="t-label text-ink-faint">no decisions found</p>
+              ) : (
+                <dl>
+                  {decisions.map((d) => (
+                    <div
+                      key={d.slug}
+                      className="flex items-baseline gap-3 border-b border-constr py-1.5 last:border-b-0"
+                    >
+                      <dd className="t-label text-ink-dim">{d.title}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </Panel>
+          </div>
+        </div>
+      </main>
+    </>
   );
 }
