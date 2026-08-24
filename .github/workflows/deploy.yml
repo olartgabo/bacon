@@ -14,6 +14,9 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ubuntu
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          # npm ci + next build regularly take ~9-10 min on this
+          # memory-constrained instance; default command_timeout is 10m.
+          command_timeout: 25m
           # The key is restricted server-side to a single forced command
           # (see ~ubuntu/.ssh/authorized_keys on olympus-dashboard-host) —
           # whatever is sent here is ignored in favor of that command.
