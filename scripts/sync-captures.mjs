@@ -7,11 +7,12 @@
  *
  * Run from a device with git write access to olympus (not the dashboard
  * host, which only holds a read-only deploy key). Requires:
- *   DASHBOARD_API_URL   e.g. http://localhost:3000 (or the deployed origin
- *                        once a Cloudflare Access service token exists —
- *                        see tasks/0007-dashboard-task-capture.md)
+ *   DASHBOARD_API_URL   e.g. http://localhost:3000 (or the deployed origin)
  *   OLYMPUS_REPO_PATH   local olympus checkout with git write access,
  *                        clean working tree, on a pushable branch
+ * Against the deployed origin, also set CF_ACCESS_CLIENT_ID and
+ * CF_ACCESS_CLIENT_SECRET (a Cloudflare Access service token) — see
+ * tasks/0007-dashboard-task-capture.md in olympus.
  */
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -25,6 +26,12 @@ if (!apiUrl || !repoPath) {
     "Set DASHBOARD_API_URL and OLYMPUS_REPO_PATH before running sync-captures.",
   );
   process.exit(1);
+}
+
+const accessHeaders = {};
+if (process.env.CF_ACCESS_CLIENT_ID && process.env.CF_ACCESS_CLIENT_SECRET) {
+  accessHeaders["CF-Access-Client-Id"] = process.env.CF_ACCESS_CLIENT_ID;
+  accessHeaders["CF-Access-Client-Secret"] = process.env.CF_ACCESS_CLIENT_SECRET;
 }
 
 function slugify(title) {
@@ -49,7 +56,9 @@ created_at: ${capture.createdAt}
 }
 
 async function main() {
-  const res = await fetch(`${apiUrl}/api/captures?synced=false`);
+  const res = await fetch(`${apiUrl}/api/captures?synced=false`, {
+    headers: accessHeaders,
+  });
   if (!res.ok) {
     throw new Error(`fetching pending captures failed: ${res.status}`);
   }
@@ -97,7 +106,7 @@ async function main() {
       .replace(/\\/g, "/");
     const patchRes = await fetch(`${apiUrl}/api/captures/${capture.id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...accessHeaders },
       body: JSON.stringify({ synced: true, markdownPath: relPath }),
     });
     if (!patchRes.ok) {

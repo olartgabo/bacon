@@ -2,9 +2,10 @@
 /**
  * CLI task capture — POSTs a new capture to the dashboard API.
  * Usage: node scripts/capture.mjs "title" --domain work [--status open]
- * Requires DASHBOARD_API_URL (e.g. http://localhost:3000, or the deployed
- * origin once a Cloudflare Access service token exists for non-browser
- * callers — see tasks/0007-dashboard-task-capture.md in olympus).
+ * Requires DASHBOARD_API_URL (e.g. http://localhost:3000). Against the
+ * deployed origin, also set CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET
+ * (a Cloudflare Access service token) — see
+ * tasks/0007-dashboard-task-capture.md in olympus.
  */
 // Kept as plain literals (not imported from src/lib/db/schema.ts) so this
 // script runs under plain `node` on any device, no TypeScript toolchain
@@ -50,9 +51,15 @@ if (status && !STATUSES.includes(status)) {
   process.exit(1);
 }
 
+const accessHeaders = {};
+if (process.env.CF_ACCESS_CLIENT_ID && process.env.CF_ACCESS_CLIENT_SECRET) {
+  accessHeaders["CF-Access-Client-Id"] = process.env.CF_ACCESS_CLIENT_ID;
+  accessHeaders["CF-Access-Client-Secret"] = process.env.CF_ACCESS_CLIENT_SECRET;
+}
+
 const res = await fetch(`${apiUrl}/api/captures`, {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json", ...accessHeaders },
   body: JSON.stringify({ title, domain, status, source: "cli" }),
 });
 
