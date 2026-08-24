@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useId, useState, useTransition } from "react";
 import { DOMAINS } from "@/lib/db/schema";
 
 type Status = "idle" | "ok" | "error";
@@ -11,6 +12,9 @@ export function CaptureForm() {
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
+  const titleId = useId();
+  const domainId = useId();
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,6 +34,9 @@ export function CaptureForm() {
         setTitle("");
         setStatus("ok");
         setMessage("captured — syncs to the repo on the next sync run");
+        // The Captures panel is server-rendered, so the new row only
+        // appears once the route data is refetched.
+        router.refresh();
       } catch (err) {
         setStatus("error");
         setMessage(err instanceof Error ? err.message : "capture failed");
@@ -39,43 +46,57 @@ export function CaptureForm() {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-2">
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <label htmlFor={titleId} className="sr-only">
+          Task title
+        </label>
         <input
+          id={titleId}
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="capture a task…"
           disabled={pending}
-          className="t-label flex-1 border border-object bg-sheet px-3 py-2 text-ink placeholder:text-ink-faint focus-visible:border-red disabled:opacity-60"
+          autoComplete="off"
+          className="field t-row min-w-0 flex-1"
         />
-        <select
-          value={domain}
-          onChange={(e) => setDomain(e.target.value as (typeof DOMAINS)[number])}
-          disabled={pending}
-          className="t-label-sm border border-object bg-sheet px-2 text-ink-dim disabled:opacity-60"
-        >
-          {DOMAINS.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
+        <label htmlFor={domainId} className="sr-only">
+          Domain
+        </label>
+        <span className="select-shell">
+          <select
+            id={domainId}
+            value={domain}
+            onChange={(e) =>
+              setDomain(e.target.value as (typeof DOMAINS)[number])
+            }
+            disabled={pending}
+            className="field t-label-sm"
+          >
+            {DOMAINS.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </span>
         <button
           type="submit"
           disabled={pending || title.trim().length === 0}
-          className="theme-toggle t-label-sm disabled:cursor-not-allowed disabled:opacity-50"
+          className="theme-toggle t-label-sm shrink-0"
         >
-          {pending ? "…" : "capture"}
+          {pending ? "capturing…" : "capture"}
         </button>
       </div>
-      {status !== "idle" && (
-        <p
-          className={`t-label-sm ${status === "error" ? "text-red" : "text-ink-faint"}`}
-          role="status"
-        >
-          {message}
-        </p>
-      )}
+      <p
+        className={`t-label-sm min-h-[1.4em] ${
+          status === "error" ? "text-red" : "text-ink-faint"
+        }`}
+        role="status"
+        aria-live="polite"
+      >
+        {status === "idle" ? "" : message}
+      </p>
     </form>
   );
 }
