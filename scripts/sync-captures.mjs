@@ -1,0 +1,116 @@
+#!/usr/bin/env node
+/**
+ * Renders unsynced captures from the dashboard API to Markdown in a local
+ * olympus checkout, commits, pushes, then marks each capture synced with
+ * its file path. Per olympus decision 0004: SQLite is a write buffer,
+ * Markdown is canonical — this script is what makes that true.
+ *
+ * Run from a device with git write access to olympus (not the dashboard
+ * host, which only holds a read-only deploy key). Requires:
+ *   DASHBOARD_API_URL   e.g. http://localhost:3000 (or the deployed origin
+ *                        once a Cloudflare Access service token exists —
+ *                        see tasks/0007-dashboard-task-capture.md)
+ *   OLYMPUS_REPO_PATH   local olympus checkout with git write access,
+ *                        clean working tree, on a pushable branch
+ */
+import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
+
+const apiUrl = process.env.DASHBOARD_API_URL;
+const repoPath = process.env.OLYMPUS_REPO_PATH;
+
+if (!apiUrl || !repoPath) {
+  console.error(
+    "Set DASHBOARD_API_URL and OLYMPUS_REPO_PATH before running sync-captures.",
+  );
+  process.exit(1);
+}
+
+function slugify(title) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
+function captureMarkdown(capture) {
+  return `---
+id: ${capture.id}
+domain: ${capture.domain}
+status: ${capture.status}
+source: ${capture.source}
+created_at: ${capture.createdAt}
+---
+
+# ${capture.title}
+`;
+}
+
+async function main() {
+  const res = await fetch(`${apiUrl}/api/captures?synced=false`);
+  if (!res.ok) {
+    throw new Error(`fetching pending captures failed: ${res.status}`);
+  }
+  const { captures } = await res.json();
+
+  if (captures.length === 0) {
+    console.log("nothing to sync");
+    return;
+  }
+
+  const git = (...args) =>
+    execFileSync("git", args, { cwd: repoPath, encoding: "utf-8" });
+
+  const status = git("status", "--short");
+  if (status.trim().length > 0) {
+    throw new Error(
+      `olympus checkout at ${repoPath} has uncommitted changes — refusing to sync into a dirty tree`,
+    );
+  }
+
+  for (const capture of captures) {
+    const relPath = path.join(
+      "captures",
+      capture.domain,
+      `${capture.id}-${slugify(capture.title)}.md`,
+    );
+    const absPath = path.join(repoPath, relPath);
+    mkdirSync(path.dirname(absPath), { recursive: true });
+    writeFileSync(absPath, captureMarkdown(capture));
+    git("add", relPath);
+    console.log(`wrote ${relPath}`);
+  }
+
+  git(
+    "commit",
+    "-m",
+    `captures: sync ${captures.length} pending capture(s)`,
+  );
+  git("push");
+  console.log("pushed");
+
+  for (const capture of captures) {
+    const relPath = path
+      .join("captures", capture.domain, `${capture.id}-${slugify(capture.title)}.md`)
+      .replace(/\\/g, "/");
+    const patchRes = await fetch(`${apiUrl}/api/captures/${capture.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ synced: true, markdownPath: relPath }),
+    });
+    if (!patchRes.ok) {
+      console.error(
+        `WARNING: capture ${capture.id} was committed and pushed but marking it synced failed (${patchRes.status}) — it will be re-synced next run, which will fail on a duplicate file. Check manually.`,
+      );
+      continue;
+    }
+    console.log(`marked capture ${capture.id} synced`);
+  }
+}
+
+main().catch((err) => {
+  console.error(err.message ?? err);
+  process.exit(1);
+});

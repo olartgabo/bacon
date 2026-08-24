@@ -6,3 +6,5 @@ out
 *.pem
 npm-debug.log*
 .DS_Store
+dashboard.sqlite
+dashboard.sqlite-*

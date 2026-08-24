@@ -30,6 +30,15 @@
   --selection-ink: #08090b;
 
   --frame: clamp(0.75rem, 1.6vw, 1.5rem);
+
+  /* One motion vocabulary for the whole sheet. Entering uses out-easing,
+     leaving uses in-easing; nothing here runs longer than a quarter
+     second because this is an instrument, not a title sequence. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.64, 0, 0.78, 0);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 240ms;
 }
 
 :root[data-theme="light"] {
@@ -65,8 +74,9 @@
   --color-red-dim: var(--red-dim);
   --color-red-wash: var(--red-wash);
 
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, "Space Mono", monospace;
+  --font-display: var(--font-cabinet), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, monospace;
 }
 
 html {
@@ -83,7 +93,8 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   line-height: 1.6;
-  transition: background-color 180ms ease, color 180ms ease;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color var(--dur) ease, color var(--dur) ease;
 }
 
 ::selection {
@@ -115,6 +126,27 @@ body {
   text-transform: uppercase;
 }
 
+/* The one display size on the sheet. Rule 4 of not looking generated:
+   exactly one element per view gets to be big, and it's the sheet name. */
+.t-display {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+/* Row titles: the readable tier between a mono label and body prose.
+   Sentence case on purpose — task titles are sentences, and forcing them
+   through uppercase mono tracking is what made rows unreadable. */
+.t-row {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: -0.005em;
+}
+
 .tnum {
   font-variant-numeric: tabular-nums;
 }
@@ -140,7 +172,7 @@ body {
   pointer-events: none;
   z-index: 40;
   isolation: isolate;
-  transition: border-color 180ms ease;
+  transition: border-color var(--dur) ease;
 }
 
 .corner {
@@ -195,6 +227,31 @@ body {
   }
 }
 
+/* Panels. Elevation in this system is hairline borders only — never a
+   shadow, never a background lift on top of a border. Hover raises the
+   header rule to red so the panel you're reading is identifiable at a
+   glance without moving anything. */
+.panel {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid var(--line-object);
+  background: var(--sheet-raised);
+  transition: border-color var(--dur) ease;
+}
+
+.panel:hover {
+  border-color: color-mix(in srgb, var(--line-object) 55%, var(--red));
+}
+
+.panel-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line-object);
+  padding: 0.625rem 1rem;
+}
+
 /* Space tiles — the domain grid on the landing sheet. Hover lifts the
    tile via a border color shift and a red corner tick, never a shadow;
    this system's elevation language is hairline borders, not shadows. */
@@ -204,13 +261,19 @@ body {
   border: 1px solid var(--line-object);
   background: var(--sheet-raised);
   padding: 1rem;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition: background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease, transform var(--dur) var(--ease-out);
 }
 
 .space-tile:hover,
 .space-tile:focus-visible {
   background: var(--sheet-hover);
   border-color: var(--red);
+  transform: translateY(-2px);
+}
+
+.space-tile:active {
+  transform: translateY(0);
 }
 
 .space-tile::after {
@@ -222,7 +285,7 @@ body {
   height: 0.5rem;
   border-top: 1px solid transparent;
   border-right: 1px solid transparent;
-  transition: border-color 150ms ease;
+  transition: border-color var(--dur-fast) ease;
 }
 
 .space-tile:hover::after,
@@ -233,23 +296,80 @@ body {
 
 /* Row-level interactivity inside panels: entries that expand or link
    get a hover wash and a pointer, entries that are just static readouts
-   don't — keeps the affordance honest instead of hovering everything. */
-.row-interactive {
+   don't — keeps the affordance honest instead of hovering everything.
+   The left rule is the open-state marker: a red edge that runs the full
+   height of the expanded row, tying the body back to its title. */
+.row {
+  position: relative;
+  border-bottom: 1px solid var(--line-constr);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.row::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: -0.5rem;
+  width: 1px;
+  background: var(--red);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform var(--dur) var(--ease-out);
+}
+
+.row[data-open="true"]::before {
+  transform: scaleY(1);
+}
+
+.row-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  width: 100%;
+  padding-block: 0.5rem;
+  text-align: left;
   cursor: pointer;
-  transition: background-color 120ms ease;
-}
-
-.row-interactive:hover,
-.row-interactive[open] > summary {
-  background: var(--red-wash);
-}
-
-.row-interactive summary {
   list-style: none;
+  transition: color var(--dur-fast) ease;
 }
 
-.row-interactive summary::-webkit-details-marker {
+.row-summary::-webkit-details-marker {
   display: none;
+}
+
+.row-summary:hover .row-title,
+.row[data-open="true"] .row-title {
+  color: var(--ink);
+}
+
+/* The disclosure caret is the only thing that rotates. It reads as a
+   drafting tick rather than a chevron, matching the corner marks. */
+.row-caret {
+  flex-shrink: 0;
+  width: 0.5rem;
+  color: var(--ink-faint);
+  transition: transform var(--dur) var(--ease-out), color var(--dur-fast) ease;
+}
+
+.row[data-open="true"] .row-caret {
+  transform: rotate(90deg);
+  color: var(--red);
+}
+
+.row-summary:hover .row-caret {
+  color: var(--red);
+}
+
+/* Height is driven by GSAP (see ExpandableRow.tsx), so this only owns
+   the closed state. Declaring it here rather than from JS means the
+   mount tween is a no-op and the body never flashes open for a frame. */
+.row-body {
+  overflow: hidden;
+  height: 0;
+  opacity: 0;
 }
 
 .theme-toggle {
@@ -257,38 +377,163 @@ body {
   background: var(--sheet-raised);
   color: var(--ink-faint);
   padding: 0.375rem 0.625rem;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition: background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
-.theme-toggle:hover {
+.theme-toggle:hover:not(:disabled) {
   background: var(--sheet-hover);
   border-color: var(--red);
   color: var(--ink);
 }
 
-/* Expanded markdown body inside an ExpandableRow — small, muted, and
-   deliberately narrower than the panel so long log entries stay readable. */
+.theme-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* Capture form fields. The select needs its appearance reset or every
+   browser paints its own chrome into an otherwise square system. */
+.field {
+  border: 1px solid var(--line-object);
+  background: var(--sheet);
+  color: var(--ink);
+  padding: 0.5rem 0.75rem;
+  transition: border-color var(--dur-fast) ease,
+    background-color var(--dur-fast) ease;
+}
+
+.field::placeholder {
+  color: var(--ink-faint);
+}
+
+.field:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--line-object) 50%, var(--red));
+}
+
+.field:focus-visible {
+  border-color: var(--red);
+  outline-offset: 1px;
+}
+
+.field:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* The select keeps the system's square chrome: appearance reset, and the
+   caret drawn as a border triangle on the wrapper so it inherits theme
+   color without an image or a gradient. */
+.select-shell {
+  position: relative;
+  display: inline-flex;
+}
+
+.select-shell > select.field {
+  appearance: none;
+  padding-right: 2rem;
+  width: 100%;
+}
+
+.select-shell::after {
+  content: "";
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  margin-top: -1px;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 4px solid var(--ink-faint);
+  pointer-events: none;
+  transition: border-top-color var(--dur-fast) ease;
+}
+
+.select-shell:hover::after {
+  border-top-color: var(--red);
+}
+
+/* Expanded markdown body inside an ExpandableRow. This is Satoshi at a
+   real reading size, not the mono label register of the row above it —
+   the mismatch was the whole reason opening a task looked broken. The
+   markdown's own H1 repeats the row title and is dropped in the
+   component; H2s become mono micro-labels so the two registers alternate
+   deliberately instead of colliding. */
 .prose-sheet {
-  max-width: 65ch;
+  max-width: 68ch;
+  font-family: var(--font-sans);
   font-size: 0.8125rem;
-  line-height: 1.6;
+  line-height: 1.65;
   color: var(--ink-dim);
 }
 
+.prose-sheet > :first-child {
+  margin-top: 0;
+}
+
 .prose-sheet p {
-  margin-top: 0.5rem;
+  margin-top: 0.625rem;
+}
+
+.prose-sheet h2,
+.prose-sheet h3,
+.prose-sheet h4 {
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  line-height: 1.4;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 1.125rem;
+  margin-bottom: 0.25rem;
+}
+
+.prose-sheet strong {
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .prose-sheet a {
   color: var(--red);
+  text-decoration: underline;
   text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
 }
 
 .prose-sheet code {
   font-family: var(--font-mono);
-  font-size: 0.75em;
+  font-size: 0.78em;
   background: var(--sheet-hover);
   padding: 0.1em 0.3em;
+}
+
+.prose-sheet pre {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.55;
+  background: var(--sheet);
+  border: 1px solid var(--line-constr);
+  padding: 0.75rem;
+  margin-top: 0.75rem;
+  overflow-x: auto;
+}
+
+.prose-sheet pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+.prose-sheet blockquote {
+  border-left: 1px solid var(--line-object);
+  padding-left: 0.75rem;
+  margin-top: 0.75rem;
+  color: var(--ink-faint);
+}
+
+.prose-sheet hr {
+  border: 0;
+  border-top: 1px solid var(--line-constr);
+  margin-block: 1rem;
 }
 
 .prose-sheet ul,
@@ -297,10 +542,42 @@ body {
   padding-left: 1.25rem;
 }
 
+.prose-sheet ul {
+  list-style: none;
+  padding-left: 0.875rem;
+}
+
+.prose-sheet ul > li::before {
+  content: "—";
+  color: var(--ink-faint);
+  margin-right: 0.5rem;
+  margin-left: -0.875rem;
+}
+
 .prose-sheet li {
   margin-top: 0.25rem;
 }
 
-.prose-sheet li::marker {
+.prose-sheet ol > li::marker {
+  font-family: var(--font-mono);
+  font-size: 0.75em;
   color: var(--ink-faint);
+}
+
+/* Entrance elements hide before paint so GSAP can tween them in without
+   a flash. The gate is data-motion, stamped by the inline script in
+   layout.tsx — so if JS never runs, or the visitor asked for reduced
+   motion, the attribute is absent and everything renders visible. */
+html[data-motion="on"] .reveal {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
