@@ -1,6 +1,10 @@
 import { getActions, getNumberedDocs, getRecentLogs } from "@/lib/olympus";
+import { SPACES } from "@/lib/spaces";
 import { Panel } from "@/components/Panel";
 import { Frame } from "@/components/Frame";
+import { SpaceTile } from "@/components/SpaceTile";
+import { ExpandableRow } from "@/components/ExpandableRow";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -21,9 +25,24 @@ export default function DashboardPage() {
               tasks.olartgabo.dev
             </span>
           </div>
-          <span className="t-label col-span-4 text-right text-ink-faint">
-            read-only · olympus
-          </span>
+          <div className="col-span-4 flex items-center justify-end gap-4">
+            <span className="t-label text-ink-faint">read-only · olympus</span>
+            <ThemeToggle />
+          </div>
+        </div>
+
+        <div className="sheet-grid mb-10">
+          <div className="col-span-12 mb-3 flex items-baseline gap-3">
+            <span className="t-label-sm text-ink-faint/70">Spaces</span>
+            <span className="t-label-sm tabular-nums text-ink-faint/70">
+              {String(SPACES.length).padStart(2, "0")}
+            </span>
+          </div>
+          <div className="col-span-12 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
+            {SPACES.map((space) => (
+              <SpaceTile key={space.slug} space={space} />
+            ))}
+          </div>
         </div>
 
         <div className="sheet-grid gap-y-6">
@@ -50,19 +69,16 @@ export default function DashboardPage() {
               {logs.length === 0 ? (
                 <p className="t-label text-ink-faint">no logs found</p>
               ) : (
-                <dl>
+                <div>
                   {logs.map((entry, i) => (
-                    <div
+                    <ExpandableRow
                       key={i}
-                      className="flex items-baseline gap-3 border-b border-constr py-1.5 last:border-b-0"
-                    >
-                      <dt className="t-label text-ink">{entry.device}</dt>
-                      <dd className="t-label ml-auto text-right text-ink-faint">
-                        {entry.date}
-                      </dd>
-                    </div>
+                      summary={entry.device}
+                      meta={entry.date}
+                      body={entry.body}
+                    />
                   ))}
-                </dl>
+                </div>
               )}
             </Panel>
           </div>
@@ -72,19 +88,16 @@ export default function DashboardPage() {
               {tasks.length === 0 ? (
                 <p className="t-label text-ink-faint">no tasks found</p>
               ) : (
-                <dl>
+                <div>
                   {tasks.map((t) => (
-                    <div
+                    <ExpandableRow
                       key={t.slug}
-                      className="flex items-baseline gap-3 border-b border-constr py-1.5 last:border-b-0"
-                    >
-                      <dt className="t-label-sm shrink-0 text-ink-faint/70">
-                        {t.status ?? "—"}
-                      </dt>
-                      <dd className="t-label text-ink-dim">{t.title}</dd>
-                    </div>
+                      summary={t.title}
+                      meta={t.status ?? "—"}
+                      body={t.body}
+                    />
                   ))}
-                </dl>
+                </div>
               )}
             </Panel>
 
@@ -92,16 +105,11 @@ export default function DashboardPage() {
               {decisions.length === 0 ? (
                 <p className="t-label text-ink-faint">no decisions found</p>
               ) : (
-                <dl>
+                <div>
                   {decisions.map((d) => (
-                    <div
-                      key={d.slug}
-                      className="flex items-baseline gap-3 border-b border-constr py-1.5 last:border-b-0"
-                    >
-                      <dd className="t-label text-ink-dim">{d.title}</dd>
-                    </div>
+                    <ExpandableRow key={d.slug} summary={d.title} body={d.body} />
                   ))}
-                </dl>
+                </div>
               )}
             </Panel>
           </div>
