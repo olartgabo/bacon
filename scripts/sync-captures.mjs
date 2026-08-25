@@ -9,7 +9,7 @@
  * host, which only holds a read-only deploy key). Requires:
  *   DASHBOARD_API_URL   e.g. http://localhost:3000 (or the deployed origin)
  *   OLYMPUS_REPO_PATH   local olympus checkout with git write access,
- *                        clean working tree, on a pushable branch
+ *                        clean working tree, checked out on main
  * Against the deployed origin, also set CF_ACCESS_CLIENT_ID and
  * CF_ACCESS_CLIENT_SECRET (a Cloudflare Access service token) — see
  * tasks/0007-dashboard-task-capture.md in olympus.
@@ -72,6 +72,13 @@ async function main() {
   const git = (...args) =>
     execFileSync("git", args, { cwd: repoPath, encoding: "utf-8" });
 
+  const branch = git("rev-parse", "--abbrev-ref", "HEAD").trim();
+  if (branch !== "main") {
+    throw new Error(
+      `olympus checkout at ${repoPath} is on ${branch}, not main — refusing to sync`,
+    );
+  }
+
   const status = git("status", "--short");
   if (status.trim().length > 0) {
     throw new Error(
@@ -97,7 +104,7 @@ async function main() {
     "-m",
     `captures: sync ${captures.length} pending capture(s)`,
   );
-  git("push");
+  git("push", "origin", "main");
   console.log("pushed");
 
   for (const capture of captures) {
