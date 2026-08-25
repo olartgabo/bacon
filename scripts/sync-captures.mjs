@@ -99,13 +99,22 @@ async function main() {
     console.log(`wrote ${relPath}`);
   }
 
-  git(
-    "commit",
-    "-m",
-    `captures: sync ${captures.length} pending capture(s)`,
-  );
-  git("push", "origin", "main");
-  console.log("pushed");
+  // A capture whose file is already on disk from a previous run stages no
+  // diff. Committing anyway fails with "nothing to commit" and takes the
+  // whole run down — which is how one failed PATCH below used to wedge every
+  // future sync. Commit only when something actually changed, then fall
+  // through and retry the PATCH.
+  if (git("diff", "--cached", "--name-only").trim()) {
+    git(
+      "commit",
+      "-m",
+      `captures: sync ${captures.length} pending capture(s)`,
+    );
+    git("push", "origin", "main");
+    console.log("pushed");
+  } else {
+    console.log("capture files already committed — retrying the synced mark");
+  }
 
   for (const capture of captures) {
     const relPath = path
@@ -118,7 +127,7 @@ async function main() {
     });
     if (!patchRes.ok) {
       console.error(
-        `WARNING: capture ${capture.id} was committed and pushed but marking it synced failed (${patchRes.status}) — it will be re-synced next run, which will fail on a duplicate file. Check manually.`,
+        `WARNING: capture ${capture.id} is in the repo but marking it synced failed (${patchRes.status}) — the next run will retry the mark. If it keeps failing, check the dashboard API.`,
       );
       continue;
     }
