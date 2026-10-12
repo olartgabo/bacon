@@ -2,8 +2,12 @@
 
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
-# better-sqlite3 13 ships prebuilt binaries for linux-x64/arm64, so no
-# compiler toolchain is needed here.
+# npm runs an implicit `node-gyp rebuild` for any package with a
+# binding.gyp, so better-sqlite3 compiles here even though it ships
+# prebuilt binaries. The toolchain stays in this stage only.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci
 
