@@ -1,10 +1,6 @@
-import { desc } from "drizzle-orm";
 import { getActions, getNumberedDocs, getRecentLogs } from "@/lib/olympus";
-import { db } from "@/lib/db/client";
-import { captures as capturesTable } from "@/lib/db/schema";
 import { Card, EmptyState } from "@/design/ui";
 import { ExpandableRow } from "@/components/ExpandableRow";
-import { CaptureForm } from "@/components/CaptureForm";
 import { Reveal } from "@/components/Reveal";
 
 export const dynamic = "force-dynamic";
@@ -14,12 +10,6 @@ export default function DashboardPage() {
   const tasks = getNumberedDocs("tasks");
   const decisions = getNumberedDocs("decisions");
   const logs = getRecentLogs(8);
-  const captures = db
-    .select()
-    .from(capturesTable)
-    .orderBy(desc(capturesTable.id))
-    .limit(10)
-    .all();
 
   return (
     <Reveal>
@@ -27,10 +17,6 @@ export default function DashboardPage() {
         <header className="reveal mb-8">
           <h1 className="t-display">Today</h1>
         </header>
-
-        <section className="reveal mb-8 max-w-3xl">
-          <CaptureForm />
-        </section>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
           <div className="flex flex-col gap-6">
@@ -54,19 +40,6 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <Card title="Captures" count={captures.length} className="reveal">
-              {captures.length === 0 ? (
-                <EmptyState title="Nothing captured yet" />
-              ) : (
-                captures.map((c) => (
-                  <div key={c.id} className="task-row">
-                    <span className="t-row min-w-0 flex-1 truncate text-ink-dim">{c.title}</span>
-                    <span className="t-meta shrink-0">{c.domain}</span>
-                  </div>
-                ))
-              )}
-            </Card>
-
             <Card title="Waiting on you" count={pending.length} className="reveal">
               {pending.length === 0 ? (
                 <EmptyState title="Nothing pending" />
