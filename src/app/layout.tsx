@@ -1,13 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Space_Mono } from "next/font/google";
 import "./globals.css";
-import { MobileSpaceTabs } from "@/components/MobileSpaceTabs";
+import { TopBar } from "@/components/TopBar";
 
-// Same three faces as olartgabo.dev, loaded the same way: Cabinet for
-// display, Satoshi for prose, Space Mono for every label and dimension.
-// Before this the mono token listed "Space Mono" *after* ui-monospace, so
-// it never won — the whole sheet rendered in system fonts.
+// Cabinet for the one display title per view, Satoshi for everything a
+// person reads, Space Mono only for machine values (refs, tokens, times).
 const cabinet = localFont({
   src: "../fonts/CabinetGrotesk-Variable.woff2",
   variable: "--font-cabinet",
@@ -29,24 +27,27 @@ const spaceMono = Space_Mono({
   display: "swap",
 });
 
-export const viewport = {
-  themeColor: "#08090b",
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fdf5ea" },
+    { media: "(prefers-color-scheme: dark)", color: "#202024" },
+  ],
 };
 
 export const metadata: Metadata = {
-  title: "tasks.olartgabo.dev",
-  description: "Olympus task dashboard — read-only view over the coordination repo.",
+  title: { default: "bacon", template: "%s · bacon" },
+  description: "Agent-first task tracker.",
+  manifest: "/manifest.webmanifest",
 };
 
-// Runs before paint so the stored theme applies before React hydrates —
-// otherwise a light-mode visitor sees a dark flash on every load. The
-// motion flag gates .reveal's opacity:0 on JS actually being alive, so a
-// failed bundle or a reduced-motion visitor gets a visible page instead
-// of an empty one.
+// Runs before paint so a stored theme applies before React hydrates.
+// With nothing stored, CSS follows prefers-color-scheme. The motion flag
+// gates .reveal's opacity:0 on JS actually being alive, so a failed
+// bundle or a reduced-motion visitor still gets a visible page.
 const BOOT = `
 try {
   var t = localStorage.getItem("theme");
-  if (t === "light") document.documentElement.dataset.theme = "light";
+  if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
 } catch (e) {}
 try {
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -72,8 +73,8 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: BOOT }} />
       </head>
       <body>
+        <TopBar />
         {children}
-        <MobileSpaceTabs />
       </body>
     </html>
   );

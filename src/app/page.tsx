@@ -1,13 +1,9 @@
+import { desc } from "drizzle-orm";
 import { getActions, getNumberedDocs, getRecentLogs } from "@/lib/olympus";
-import { SPACES } from "@/lib/spaces";
 import { db } from "@/lib/db/client";
 import { captures as capturesTable } from "@/lib/db/schema";
-import { desc } from "drizzle-orm";
-import { Panel, PanelEmpty } from "@/components/Panel";
-import { Frame } from "@/components/Frame";
-import { SpaceTile } from "@/components/SpaceTile";
+import { Card, EmptyState } from "@/design/ui";
 import { ExpandableRow } from "@/components/ExpandableRow";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { CaptureForm } from "@/components/CaptureForm";
 import { Reveal } from "@/components/Reveal";
 
@@ -25,204 +21,76 @@ export default function DashboardPage() {
     .limit(10)
     .all();
 
-  const unsynced = captures.filter((c) => !c.synced).length;
-
   return (
-    <>
-      <Frame />
-      <Reveal>
-        <main className="mx-auto max-w-[90rem] px-[var(--frame)] pt-10 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-10">
-          {/* Masthead. One display-size element on the sheet, per the
-              portfolio's rule — everything else is label register. */}
-          <header className="sheet-grid mb-10 border-b border-object pb-5">
-            <div className="reveal col-span-12 flex items-end justify-between gap-4 md:col-span-7">
-              <div>
-                <span className="t-label-sm block text-red">SHEET 01</span>
-                <h1 className="t-display mt-1.5 text-ink">Tasks</h1>
-              </div>
-            </div>
-            <div className="reveal col-span-12 mt-4 flex items-end justify-between gap-4 md:col-span-5 md:mt-0">
-              <dl className="grid grid-cols-3 gap-x-5 gap-y-1">
-                <Stat label="Open" value={tasks.length} />
-                <Stat label="Pending" value={pending.length} />
-                <Stat label="Unsynced" value={unsynced} accent={unsynced > 0} />
-              </dl>
-              <ThemeToggle />
-            </div>
-          </header>
+    <Reveal>
+      <main className="shell py-10">
+        <header className="reveal mb-8">
+          <h1 className="t-display">Today</h1>
+        </header>
 
-          {/* Capture is the only thing you *do* on this sheet, so it sits
-              above the readouts and spans the reading column. */}
-          <section className="sheet-grid mb-10">
-            <div className="reveal col-span-12 lg:col-span-8">
-              <span className="t-label-sm mb-2 block text-ink-faint">
-                Capture
-              </span>
-              <CaptureForm />
-            </div>
-          </section>
+        <section className="reveal mb-8 max-w-3xl">
+          <CaptureForm />
+        </section>
 
-          {/* Desktop only — mobile gets the same set as a fixed bottom
-              tab strip (MobileSpaceTabs, in layout.tsx) instead of a
-              cramped grid. The hidden/md:block toggle has to live on a
-              plain wrapper: .sheet-grid sets display:grid outside any
-              Tailwind layer, which beats a layered "hidden" on the same
-              element regardless of order. */}
-          <div className="hidden md:block">
-            <section className="sheet-grid mb-10">
-              <div className="reveal col-span-12 mb-3 flex items-baseline gap-3 border-b border-constr pb-2">
-                <span className="t-label text-ink">Spaces</span>
-                <span className="t-label-sm tnum text-ink-faint">
-                  {String(SPACES.length).padStart(2, "0")}
-                </span>
-              </div>
-              <div className="col-span-12 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
-                {SPACES.map((space, i) => (
-                  <SpaceTile key={space.slug} space={space} index={i} />
-                ))}
-              </div>
-            </section>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+          <div className="flex flex-col gap-6">
+            <Card title="Tasks" count={tasks.length} className="reveal">
+              {tasks.length === 0 ? (
+                <EmptyState title="No tasks in olympus" />
+              ) : (
+                tasks.map((t) => (
+                  <ExpandableRow key={t.slug} summary={t.title} meta={t.status ?? "—"} body={t.body} />
+                ))
+              )}
+            </Card>
+
+            <Card title="Decisions" count={decisions.length} className="reveal">
+              {decisions.length === 0 ? (
+                <EmptyState title="No decisions recorded" />
+              ) : (
+                decisions.map((d) => <ExpandableRow key={d.slug} summary={d.title} body={d.body} />)
+              )}
+            </Card>
           </div>
 
-          {/* Asymmetric on purpose: Tasks is the sheet's subject and gets
-              the wide column; the ledger panels stack narrow beside it. */}
-          <section className="sheet-grid gap-y-6">
-            <div className="col-span-12 flex flex-col gap-6 lg:col-span-7">
-              <Panel title="Tasks" count={tasks.length} hint="olympus/tasks">
-                {tasks.length === 0 ? (
-                  <PanelEmpty>no tasks found</PanelEmpty>
-                ) : (
-                  tasks.map((t) => (
-                    <ExpandableRow
-                      key={t.slug}
-                      summary={t.title}
-                      meta={t.status ?? "—"}
-                      body={t.body}
-                    />
-                  ))
-                )}
-              </Panel>
+          <div className="flex flex-col gap-6">
+            <Card title="Captures" count={captures.length} className="reveal">
+              {captures.length === 0 ? (
+                <EmptyState title="Nothing captured yet" />
+              ) : (
+                captures.map((c) => (
+                  <div key={c.id} className="task-row">
+                    <span className="t-row min-w-0 flex-1 truncate text-ink-dim">{c.title}</span>
+                    <span className="t-meta shrink-0">{c.domain}</span>
+                  </div>
+                ))
+              )}
+            </Card>
 
-              <Panel
-                title="Decisions"
-                count={decisions.length}
-                hint="olympus/decisions"
-              >
-                {decisions.length === 0 ? (
-                  <PanelEmpty>no decisions found</PanelEmpty>
-                ) : (
-                  decisions.map((d) => (
-                    <ExpandableRow
-                      key={d.slug}
-                      summary={d.title}
-                      body={d.body}
-                    />
-                  ))
-                )}
-              </Panel>
-            </div>
+            <Card title="Waiting on you" count={pending.length} className="reveal">
+              {pending.length === 0 ? (
+                <EmptyState title="Nothing pending" />
+              ) : (
+                pending.map((item, i) => (
+                  <div key={i} className="task-row">
+                    <span className="t-row text-ink-dim">{item.text}</span>
+                  </div>
+                ))
+              )}
+            </Card>
 
-            <div className="col-span-12 flex flex-col gap-6 lg:col-span-5">
-              <Panel
-                title="Captures"
-                count={captures.length}
-                hint={unsynced > 0 ? `${unsynced} unsynced` : "all synced"}
-              >
-                {captures.length === 0 ? (
-                  <PanelEmpty>nothing captured yet</PanelEmpty>
-                ) : (
-                  <dl>
-                    {captures.map((c) => (
-                      <div
-                        key={c.id}
-                        className="flex items-baseline gap-3 border-b border-constr py-2 last:border-b-0"
-                      >
-                        <dt
-                          className={`t-label-sm shrink-0 ${
-                            c.synced ? "text-ink-faint" : "text-red"
-                          }`}
-                        >
-                          {c.synced ? "synced" : "pending"}
-                        </dt>
-                        <dd className="t-row min-w-0 flex-1 truncate text-ink-dim">
-                          {c.title}
-                        </dd>
-                        <span className="t-label-sm shrink-0 text-ink-faint">
-                          {c.domain}
-                        </span>
-                      </div>
-                    ))}
-                  </dl>
-                )}
-              </Panel>
-
-              <Panel
-                title="Pending"
-                count={pending.length}
-                hint="human/actions"
-              >
-                {pending.length === 0 ? (
-                  <PanelEmpty>nothing pending</PanelEmpty>
-                ) : (
-                  <dl>
-                    {pending.map((item, i) => (
-                      <div
-                        key={i}
-                        className="flex items-baseline gap-3 border-b border-constr py-2 last:border-b-0"
-                      >
-                        <dt className="t-label-sm shrink-0 text-red">—</dt>
-                        <dd className="t-row text-ink-dim">{item.text}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                )}
-              </Panel>
-
-              <Panel title="Recent logs" count={logs.length} hint="olympus/logs">
-                {logs.length === 0 ? (
-                  <PanelEmpty>no logs found</PanelEmpty>
-                ) : (
-                  logs.map((entry, i) => (
-                    <ExpandableRow
-                      key={i}
-                      summary={entry.device}
-                      meta={entry.date}
-                      body={entry.body}
-                    />
-                  ))
-                )}
-              </Panel>
-            </div>
-          </section>
-
-          <footer className="sheet-grid mt-12 border-t border-constr pt-4">
-            <span className="t-label-sm col-span-12 text-ink-faint">
-              olympus · captures write local, sync manual
-            </span>
-          </footer>
-        </main>
-      </Reveal>
-    </>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: number;
-  accent?: boolean;
-}) {
-  return (
-    <div>
-      <dt className="t-label-sm text-ink-faint">{label}</dt>
-      <dd
-        className={`t-row tnum mt-0.5 ${accent ? "text-red" : "text-ink-dim"}`}
-      >
-        {String(value).padStart(2, "0")}
-      </dd>
-    </div>
+            <Card title="Recent logs" count={logs.length} className="reveal">
+              {logs.length === 0 ? (
+                <EmptyState title="No device logs" />
+              ) : (
+                logs.map((entry, i) => (
+                  <ExpandableRow key={i} summary={entry.device} meta={entry.date} body={entry.body} />
+                ))
+              )}
+            </Card>
+          </div>
+        </div>
+      </main>
+    </Reveal>
   );
 }

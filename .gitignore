@@ -11,3 +11,6 @@ dashboard.sqlite-*
 sync-captures.log
 *.tsbuildinfo
 next-env.d.ts
+bacon.sqlite
+bacon.sqlite-*
+.playwright-mcp/

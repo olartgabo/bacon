@@ -58,12 +58,12 @@ export function CaptureForm() {
           placeholder="capture a task…"
           disabled={pending}
           autoComplete="off"
-          className="field t-row min-w-0 flex-1"
+          className="field min-w-0 flex-1"
         />
         <label htmlFor={domainId} className="sr-only">
           Domain
         </label>
-        <span className="select-shell">
+        <span className="select-shell sm:w-48">
           <select
             id={domainId}
             value={domain}
@@ -71,7 +71,7 @@ export function CaptureForm() {
               setDomain(e.target.value as (typeof DOMAINS)[number])
             }
             disabled={pending}
-            className="field t-label-sm"
+            className="field"
           >
             {DOMAINS.map((d) => (
               <option key={d} value={d}>
@@ -83,14 +83,14 @@ export function CaptureForm() {
         <button
           type="submit"
           disabled={pending || title.trim().length === 0}
-          className="theme-toggle t-label-sm shrink-0"
+          className="btn btn-primary shrink-0"
         >
           {pending ? "capturing…" : "capture"}
         </button>
       </div>
       <p
-        className={`t-label-sm min-h-[1.4em] ${
-          status === "error" ? "text-red" : "text-ink-faint"
+        className={`t-meta min-h-[1.4em] ${
+          status === "error" ? "text-brand-ink" : ""
         }`}
         role="status"
         aria-live="polite"
