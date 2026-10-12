@@ -651,6 +651,18 @@ export function listIdentities(ctx: Ctx): IdentityView[] {
     .map(({ tokenHash, ...rest }) => ({ ...rest, hasToken: tokenHash !== null }));
 }
 
+/** Names a task can be assigned to: active owner and agent identities. */
+export function listAssignees(ctx: Ctx): string[] {
+  requireStaff(ctx);
+  return ctx.db
+    .select({ name: identities.name })
+    .from(identities)
+    .where(and(inArray(identities.kind, ["owner", "agent"]), isNull(identities.revokedAt)))
+    .orderBy(asc(identities.name))
+    .all()
+    .map((r) => r.name);
+}
+
 /** Returns the bearer token once. Only its hash is stored. */
 export function createIdentity(
   ctx: Ctx,

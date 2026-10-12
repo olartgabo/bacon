@@ -41,18 +41,11 @@ export const metadata: Metadata = {
 };
 
 // Runs before paint so a stored theme applies before React hydrates.
-// With nothing stored, CSS follows prefers-color-scheme. The motion flag
-// gates .reveal's opacity:0 on JS actually being alive, so a failed
-// bundle or a reduced-motion visitor still gets a visible page.
+// With nothing stored, CSS follows prefers-color-scheme.
 const BOOT = `
 try {
   var t = localStorage.getItem("theme");
   if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
-} catch (e) {}
-try {
-  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    document.documentElement.dataset.motion = "on";
-  }
 } catch (e) {}
 `;
 
@@ -62,8 +55,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // suppressHydrationWarning: the BOOT script stamps data-theme and
-    // data-motion onto <html> before React sees it, which is the point.
+    // suppressHydrationWarning: the BOOT script stamps data-theme onto
+    // <html> before React sees it, which is the point.
     <html
       lang="en"
       suppressHydrationWarning

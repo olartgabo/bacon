@@ -1,69 +1,79 @@
-import { getActions, getNumberedDocs, getRecentLogs } from "@/lib/olympus";
-import { Card, EmptyState } from "@/design/ui";
-import { ExpandableRow } from "@/components/ExpandableRow";
-import { Reveal } from "@/components/Reveal";
+import { createTaskAction } from "./actions";
+import { ActionForm, Submit } from "@/components/ActionForm";
+import { TaskList } from "@/components/TaskList";
+import { Card, Input, Select } from "@/design/ui";
+import { PRIORITIES, SPACES, SPACE_LABEL } from "@/lib/bacon/model";
+import { listTasks } from "@/lib/bacon/service";
+import { staffCtx } from "@/lib/bacon/session";
 
 export const dynamic = "force-dynamic";
 
-export default function DashboardPage() {
-  const { pending } = getActions();
-  const tasks = getNumberedDocs("tasks");
-  const decisions = getNumberedDocs("decisions");
-  const logs = getRecentLogs(8);
+function inDays(days: number): string {
+  return new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+}
+
+export default async function TodayPage() {
+  const ctx = await staffCtx();
+  const inProgress = listTasks(ctx, { status: ["in-progress"] });
+  const upNext = listTasks(ctx, { status: ["open"], limit: 15 });
+  const dueSoon = listTasks(ctx, { status: ["open", "in-progress", "blocked", "waiting"], dueBefore: inDays(7) });
+  const stuck = listTasks(ctx, { status: ["blocked", "waiting"] });
 
   return (
-    <Reveal>
-      <main className="shell py-10">
-        <header className="reveal mb-8">
-          <h1 className="t-display">Today</h1>
-        </header>
+    <main className="shell py-10">
+      <header className="mb-6">
+        <h1 className="t-display">Today</h1>
+      </header>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-          <div className="flex flex-col gap-6">
-            <Card title="Tasks" count={tasks.length} className="reveal">
-              {tasks.length === 0 ? (
-                <EmptyState title="No tasks in olympus" />
-              ) : (
-                tasks.map((t) => (
-                  <ExpandableRow key={t.slug} summary={t.title} meta={t.status ?? "—"} body={t.body} />
-                ))
-              )}
-            </Card>
-
-            <Card title="Decisions" count={decisions.length} className="reveal">
-              {decisions.length === 0 ? (
-                <EmptyState title="No decisions recorded" />
-              ) : (
-                decisions.map((d) => <ExpandableRow key={d.slug} summary={d.title} body={d.body} />)
-              )}
-            </Card>
-          </div>
-
-          <div className="flex flex-col gap-6">
-            <Card title="Waiting on you" count={pending.length} className="reveal">
-              {pending.length === 0 ? (
-                <EmptyState title="Nothing pending" />
-              ) : (
-                pending.map((item, i) => (
-                  <div key={i} className="task-row">
-                    <span className="t-row text-ink-dim">{item.text}</span>
-                  </div>
-                ))
-              )}
-            </Card>
-
-            <Card title="Recent logs" count={logs.length} className="reveal">
-              {logs.length === 0 ? (
-                <EmptyState title="No device logs" />
-              ) : (
-                logs.map((entry, i) => (
-                  <ExpandableRow key={i} summary={entry.device} meta={entry.date} body={entry.body} />
-                ))
-              )}
-            </Card>
-          </div>
+      <ActionForm action={createTaskAction} className="mb-8 max-w-3xl">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <label className="sr-only" htmlFor="quick-title">
+            New task
+          </label>
+          <Input id="quick-title" name="title" placeholder="Add a task…" required autoComplete="off" />
+          <label className="sr-only" htmlFor="quick-space">
+            Space
+          </label>
+          <Select id="quick-space" name="space" defaultValue="" className="sm:w-52">
+            <option value="">Inbox (no space)</option>
+            {SPACES.map((s) => (
+              <option key={s} value={s}>
+                {SPACE_LABEL[s]}
+              </option>
+            ))}
+          </Select>
+          <label className="sr-only" htmlFor="quick-priority">
+            Priority
+          </label>
+          <Select id="quick-priority" name="priority" defaultValue="normal" className="sm:w-32">
+            {PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </Select>
+          <Submit>Add</Submit>
         </div>
-      </main>
-    </Reveal>
+      </ActionForm>
+
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <div className="flex flex-col gap-6">
+          <Card title="In progress" count={inProgress.length}>
+            <TaskList tasks={inProgress} empty="Nothing in progress" />
+          </Card>
+          <Card title="Up next" count={upNext.length}>
+            <TaskList tasks={upNext} empty="No open tasks" />
+          </Card>
+        </div>
+        <div className="flex flex-col gap-6">
+          <Card title="Due this week" count={dueSoon.length}>
+            <TaskList tasks={dueSoon} empty="Nothing due in the next 7 days" />
+          </Card>
+          <Card title="Blocked or waiting" count={stuck.length}>
+            <TaskList tasks={stuck} empty="Nothing stuck" />
+          </Card>
+        </div>
+      </div>
+    </main>
   );
 }
