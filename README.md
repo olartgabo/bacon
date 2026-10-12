@@ -1,16 +1,20 @@
-# tasks.olartgabo.dev
+# bacon
 
-Read-only dashboard over the [olympus](https://github.com/olartgabo/olympus)
-coordination repo — stage 1 of `docs/web-dashboard-stack.md`'s build order in
-that repo. Renders pending actions, tasks, decisions, and device logs straight
-from Markdown. No database, no writes yet.
+An agent-first task tracker, served at `tasks.olartgabo.dev`. Agents create,
+claim, and update tasks over an HTTP MCP endpoint. Gabriel triages and reviews
+in the web UI, and a few outside requesters file requests into an inbox.
+
+bacon is stage 2 of the dashboard plan in
+[olympus](https://github.com/olartgabo/olympus) (`docs/web-dashboard-stack.md`).
+It started as the read-only `tasks` repo, and that history is preserved here.
+SQLite is the source of truth. A scheduled export writes Markdown snapshots back
+into `olympus/tasks/bacon/` so agents reading the repo still see the work.
 
 ## Design
 
-Shares its token system with `olartgabo.dev` (`src/app/globals.css`) — same
-`--sheet` / `--ink` / `--object` / `--red` variable names, same mono-label
-convention. This app only runs the dark "blueprint" act; there's no print
-toggle, since this is a working tool on a screen, not a printable page.
+The brand source is `design/bacon-source.svg`, which uses cream `#FDF5EA`, ink
+`#29292D`, and red `#D45545`. Tokens and components live in `src/design/`, and
+`/design` renders the style guide.
 
 ## Dev
 
@@ -22,7 +26,6 @@ npm run dev
 
 ## Status
 
-Stage 1 only. Cloudflare Tunnel + Zero Trust Access, task capture (write
-path), the Telegram bridge, and the approval queue are all separate,
-still-open steps — see `docs/web-dashboard-stack.md` and `human/actions.md`
-in the olympus repo.
+Stage 2 in progress. Today the app still renders olympus Markdown read-only and
+accepts captures. The MCP endpoint, identities, leases, the inbox, and approvals
+are being built.
