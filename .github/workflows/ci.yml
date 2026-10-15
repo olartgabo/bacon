@@ -1,0 +1,42 @@
+name: CI
+
+# Deploys are pulled by Coolify on Theseus (see docs/deploy.md); this
+# workflow only proves a commit is shippable.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build
+
+  image:
+    runs-on: ubuntu-24.04
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t bacon:ci .
+      - name: Smoke test the image
+        run: |
+          docker run -d --name bacon -p 3000:3000 bacon:ci
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:3000/api/health && break
+            sleep 1
+          done
+          curl -fsS http://localhost:3000/api/health
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/mcp)" = 401
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/)" = 307
+      - if: failure()
+        run: docker logs bacon

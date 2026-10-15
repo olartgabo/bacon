@@ -1,73 +1,64 @@
 #!/usr/bin/env node
 /**
- * CLI task capture — POSTs a new capture to the dashboard API.
- * Usage: node scripts/capture.mjs "title" --domain work [--status open]
- * Requires DASHBOARD_API_URL (e.g. http://localhost:3000). Against the
- * deployed origin, also set CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET
- * (a Cloudflare Access service token) — see
- * tasks/0007-dashboard-task-capture.md in olympus.
+ * Capture a task from any device:
+ *
+ *   node scripts/capture.mjs "Renew the AWS SCD credits" --space aws [--priority high] [--due 2026-11-01]
+ *
+ * Without --space the task lands in the inbox. Calls bacon's MCP endpoint
+ * as the identity that owns BACON_TOKEN, so the capture is attributed like
+ * any other agent write.
+ *
+ *   BACON_URL    e.g. https://tasks.olartgabo.dev (default http://localhost:3000)
+ *   BACON_TOKEN  a bcn_… token minted in Settings → Identities
  */
-// Kept as plain literals (not imported from src/lib/db/schema.ts) so this
-// script runs under plain `node` on any device, no TypeScript toolchain
-// required. Keep in sync with schema.ts's DOMAINS/STATUSES by hand.
-const DOMAINS = [
-  "work",
-  "university",
-  "aws",
-  "student-community-day",
-  "quantum",
-  "personal",
-  "projects",
-];
-const STATUSES = ["open", "in-progress", "done"];
 
-const apiUrl = process.env.DASHBOARD_API_URL;
-if (!apiUrl) {
-  console.error("Set DASHBOARD_API_URL before running capture.mjs.");
+const url = `${process.env.BACON_URL ?? "http://localhost:3000"}/api/mcp`;
+const token = process.env.BACON_TOKEN;
+if (!token) {
+  console.error("Set BACON_TOKEN to a bcn_… token from Settings → Identities.");
   process.exit(1);
 }
 
 const args = process.argv.slice(2);
-const title = args.find((a) => !a.startsWith("--"));
+const title = args.find((a, i) => !a.startsWith("--") && !args[i - 1]?.startsWith("--"));
 if (!title) {
-  console.error('Usage: node scripts/capture.mjs "title" --domain <domain> [--status <status>]');
+  console.error('Usage: node scripts/capture.mjs "title" [--space <space>] [--priority <p>] [--due YYYY-MM-DD]');
   process.exit(1);
 }
 
-function flag(name) {
+const flag = (name) => {
   const i = args.indexOf(`--${name}`);
   return i === -1 ? undefined : args[i + 1];
-}
+};
 
-const domain = flag("domain");
-const status = flag("status");
-
-if (!domain || !DOMAINS.includes(domain)) {
-  console.error(`--domain is required and must be one of: ${DOMAINS.join(", ")}`);
-  process.exit(1);
-}
-if (status && !STATUSES.includes(status)) {
-  console.error(`--status must be one of: ${STATUSES.join(", ")}`);
-  process.exit(1);
-}
-
-const accessHeaders = {};
-if (process.env.CF_ACCESS_CLIENT_ID && process.env.CF_ACCESS_CLIENT_SECRET) {
-  accessHeaders["CF-Access-Client-Id"] = process.env.CF_ACCESS_CLIENT_ID;
-  accessHeaders["CF-Access-Client-Secret"] = process.env.CF_ACCESS_CLIENT_SECRET;
-}
-
-const res = await fetch(`${apiUrl}/api/captures`, {
+const res = await fetch(url, {
   method: "POST",
-  headers: { "Content-Type": "application/json", ...accessHeaders },
-  body: JSON.stringify({ title, domain, status, source: "cli" }),
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json, text/event-stream",
+    Authorization: `Bearer ${token}`,
+  },
+  body: JSON.stringify({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "tools/call",
+    params: {
+      name: "create_task",
+      arguments: { title, space: flag("space"), priority: flag("priority"), due: flag("due") },
+    },
+  }),
 });
 
 if (!res.ok) {
-  const body = await res.json().catch(() => ({}));
-  console.error(`capture failed (${res.status}): ${body.error ?? "unknown error"}`);
+  console.error(`bacon returned ${res.status}: ${await res.text()}`);
   process.exit(1);
 }
 
-const { capture } = await res.json();
-console.log(`captured #${capture.id}: ${capture.title} [${capture.domain}]`);
+const { result, error } = await res.json();
+const text = result?.content?.[0]?.text ?? error?.message ?? "no response";
+if (error || result?.isError) {
+  console.error(text);
+  process.exit(1);
+}
+const task = JSON.parse(text);
+console.log(`${task.ref}  ${task.status}  ${task.title}`);

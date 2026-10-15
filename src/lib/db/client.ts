@@ -1,33 +1,35 @@
+import path from "node:path";
 import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from "./schema";
 
+export type Db = BetterSQLite3Database<typeof schema>;
+
+const MIGRATIONS = path.join(process.cwd(), "drizzle");
+
 /**
- * Per decision 0004 (olympus repo): this DB is a write buffer and read
- * index, not the source of truth — it can be dropped and rebuilt at any
- * time. DATABASE_PATH defaults to a repo-local file for dev; the host
- * deploy should point it somewhere outside the git working tree.
+ * SQLite is the source of truth (olympus decision 0005); the Markdown in
+ * olympus is an export. Opens the file, applies pending migrations, and
+ * returns a Drizzle handle. Tests pass ":memory:".
  */
-function dbPath(): string {
-  return process.env.DATABASE_PATH ?? "./dashboard.sqlite";
+export function openDb(file: string): Db {
+  const sqlite = new Database(file);
+  sqlite.pragma("journal_mode = WAL");
+  sqlite.pragma("foreign_keys = ON");
+  // Agents on four devices write concurrently; wait for the lock instead of
+  // failing with SQLITE_BUSY.
+  sqlite.pragma("busy_timeout = 5000");
+  const db = drizzle(sqlite, { schema });
+  migrate(db, { migrationsFolder: MIGRATIONS });
+  return db;
 }
 
-const sqlite = new Database(dbPath());
-sqlite.pragma("journal_mode = WAL");
+let shared: Db | undefined;
 
-sqlite.exec(`
-  CREATE TABLE IF NOT EXISTS captures (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    domain TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'open',
-    due TEXT,
-    source TEXT NOT NULL DEFAULT 'web',
-    created_by TEXT,
-    created_at TEXT NOT NULL,
-    synced INTEGER NOT NULL DEFAULT 0,
-    markdown_path TEXT
-  );
-`);
-
-export const db = drizzle(sqlite, { schema });
+/** Opened on first use, not at import, so `next build` never touches the
+ * production database file. */
+export function getDb(): Db {
+  shared ??= openDb(process.env.DATABASE_PATH ?? "./bacon.sqlite");
+  return shared;
+}

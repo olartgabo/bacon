@@ -48,7 +48,7 @@ export function ExpandableRow({
 
       if (open) {
         gsap.fromTo(
-          el.querySelectorAll(".prose-sheet > *"),
+          el.querySelectorAll(".prose > *"),
           { y: 6, opacity: 0 },
           {
             y: 0,
@@ -83,7 +83,7 @@ export function ExpandableRow({
             in the body one click away. */}
         {meta && (
           <span
-            className="t-label-sm max-w-[40%] shrink-0 truncate text-ink-faint"
+            className="t-meta max-w-[40%] shrink-0 truncate"
             title={typeof meta === "string" ? meta : undefined}
           >
             {meta}
@@ -93,7 +93,7 @@ export function ExpandableRow({
       <div id={panelId} ref={bodyRef} className="row-body" inert={!open}>
         {/* pl matches the caret column so the body hangs under the
             title, not under the tick. */}
-        <div className="prose-sheet pt-1 pb-4 pl-[1.25rem]">
+        <div className="prose pt-1 pb-4 pl-[1.25rem]">
           <ReactMarkdown>{body.replace(LEADING_H1, "")}</ReactMarkdown>
         </div>
       </div>
@@ -101,8 +101,7 @@ export function ExpandableRow({
   );
 }
 
-/** A drafting tick, not a chevron — same square language as the frame's
- * corner marks. Rotates 90° when the row opens. */
+/** Rotates 90° when the row opens. */
 function Caret() {
   return (
     <svg
